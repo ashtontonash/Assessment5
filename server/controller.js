@@ -1,10 +1,80 @@
 require('dotenv').config()
-const sequelize = require('sequelize')
+
+const {CONNECTION_STRING} = process.env
+
+const Sequelize = require('sequelize')
+
+const sequelize = new Sequelize(CONNECTION_STRING, {
+    dialect: 'postgres',
+    dialectOptions: {
+        ssl: {
+            rejectUnauthorized: false
+        }
+    }
+})
 
 
 
 
 module.exports = {
+    
+    getCountries: (req, res) => {
+        sequelize.query(`SELECT * FROM countries;`)
+            .then((dbRes) => {
+                res.status(200).send(dbRes[0])
+            })
+            .catch((err) => {
+                console.log(err)
+            })
+    },
+
+    createCity: (req, res) => {
+        const {name, rating, countryId} = req.body
+
+        sequelize.query(`
+            INSERT INTO cities
+            (name, rating, country_id)
+            VALUES
+            ('${name}', '${rating}', '${countryId}');
+        `)    
+            .then((dbRes) => {
+                res.status(200).send(dbRes[0])
+            })
+            .catch((err) => {
+                console.log(err)
+            })
+    },
+    
+    getCities: (req, res) => {
+        sequelize.query(`
+            SELECT ci.city_id, ci.name AS city,
+            ci.rating, co.country_id, co.name AS country
+            FROM cities ci
+            JOIN countries co ON ci.country_id = co.country_id;
+        `)
+            .then((dbRes) => {
+                res.status(200).send(dbRes[0])
+            })
+            .catch((err) => {
+                console.log(err)
+            })
+    },
+    
+    deleteCity: (req, res) => {
+        const {id} = req.params
+
+        sequelize.query(`
+            DELETE FROM cities
+            WHERE city_id = ${id}
+        `)
+        .then((dbRes) => {
+            res.status(200).send(dbRes[0])
+        })
+        .catch((err) => {
+            console.log(err)
+        })
+    },
+
     seed: (req, res) => {
         sequelize.query(`
             drop table if exists cities;
@@ -15,7 +85,12 @@ module.exports = {
                 name varchar
             );
 
-            *****YOUR CODE HERE*****
+            CREATE TABLE cities(
+                city_id SERIAL PRIMARY KEY,
+                name VARCHAR,
+                rating INTEGER,
+                country_id INTEGER REFERENCES countries(country_id)
+            );
 
             insert into countries (name)
             values ('Afghanistan'),
